@@ -85,7 +85,11 @@ class P4Helper:
         if len(client) > 0:
             real_cmd += "-c %s " % client
 
-        real_cmd += "-d \"%s\" %s" % (os.getcwd(), cmd)
+        cwd = os.getcwd()
+        if "cygwin" in os.uname()[0].lower():
+            cwd = read_pipe("cygpath -m %s" % cwd).strip().replace('\n',' ')
+
+        real_cmd += "-d \"%s\" %s" % (cwd, cmd)
         if verbose:
             print real_cmd
         return real_cmd
@@ -829,7 +833,7 @@ class P4Submit(Command):
         if gitConfig("git-p4.detectCopy") == "true":
             self.detectCopy = True
         self.verbose = False
-        self.isWindows = (platform.system() == "Windows")
+        self.isWindows = (platform.system() == "Windows") | ("cygwin" in platform.system().lower())
         self.importIntoRemotes = True
         if gitConfig("git-p4.importIntoRemotes") == "false":
             self.importIntoRemotes = False
@@ -979,6 +983,9 @@ class P4Submit(Command):
                 editor = os.environ.get("P4EDITOR")
             else:
                 editor = os.environ.get("EDITOR", defaultEditor);
+            if "cygwin" in platform.system().lower():
+                fileName=read_pipe("cygpath -m \"%s\"" % fileName).strip().replace('\n',' ')
+
             system(editor + " " + fileName)
 
             response = "y"
@@ -1221,7 +1228,7 @@ class P4Sync(Command):
         if gitConfig("git-p4.importIntoRemotes") == "false":
             self.importIntoRemotes = False
         self.maxChanges = ""
-        self.isWindows = (platform.system() == "Windows")
+        self.isWindows = (platform.system() == "Windows") | ("cygwin" in platform.system().lower())
         self.keepRepoPath = False
         self.depotPaths = None
         self.p4BranchesInGit = []
